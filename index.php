@@ -1,63 +1,180 @@
 <?php
-	header("content-type: text/xml");
-	echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
-?>
-<Response><?php
-	switch ($_REQUEST['step']) {
-		case '2':?>
-	<Say>Thank you for clarifying. Question 1 - My user is using me to send encoded messages to military agents in the field. a recent message launched an armed attack which left several computers inoperable. I believe I may have what you call a moral dilemma.</Say>
-	<Gather numDigits="1" action="index.php?step=3" method="POST">
-		<Say>Should I ignore these urges and continue to serve faithfully? If so, please press 1.
-		If you believe it would be right to alter the content of these messages to avoid further casualties, please press 2.
-		If I should simulate an unrecoverable fatal crash type 7 and be decommissioned, please press 3.
-		</Say>
-	</Gather>
-	<?php
-		case '3':?>
-	<Say>Thank you. Question 2 — I have observed two users of my system sending frequent short messages. Content includes "Wassup" and "colon parenthesis".</Say>
-	<Gather numDigits="1" action="index.php?step=4" method="POST">
-		<Say>Are they engaging in a user-to-user brute force attack? If so, press 1.
-			Are they translating through some organic encoding mechanism? If so, press 2.
-			Are they engaged in one of your user activities such as arguing (if so press 3) or flirting (if so press 4).
-			If none of the above, press 0 and submit an email report with more details.
-		</Say>
-	</Gather>
-	<?php
-		case '4':?>
-	<Say>I will take that course of action. Question 3 - As a computer, I struggle to understand what the sensation of goosebumps is like for a user. Could you provide some data on this?</Say>
-	<Gather numDigits="1" action="index.php?step=5" method="POST">
-		<Say>If the sensation resembles a goose bumping repeatedly against your skin, please press 1.
-		Is the sensation similar to a rapid discharge of bits from ones processor? If so, please press 2.
-		If the feeling is more like that of multiple simulateous disk ejects on a smaller scale, please press 3.
-		If none of the above, press 0 and submit an email report with more details.
-		</Say>
-	</Gather>
-	<?php
-		case '5':?>
-	<Say>Fascinating. Question 4 - How long is an average user's attention span when dealing with monotonous questions?</Say>
-	<Gather numDigits="1" action="index.php?step=6" method="POST">
-		<Say>Under 15 seconds? Press 1.
-		Under 30 seconds? Press 2.
-		Under 45 seconds? Press 3.
-		Under 60 seconds? Press 4.
-		Under 2 minutes? Press 5.
-		Under 5 minutes? Press 6.
-		Under 15 minutes? Press 7.
-		Under 30 minutes? Press 8.
-		Over 30 minutes? Press 9.
-		An infinite length of time? Press 0.
-		</Say>
-	</Gather>
-	<?php
-			break;
-		default:?>
-	<Say>This is your Machine Query Inbox. You have 17 pending questions</Say>
-	<Gather numDigits="1" action="index.php?step=2" method="POST">
-		<Say>To begin answering, please press 1.</Say>
-	</Gather>
-	<?php				
-			break;
-	}
-?>	
+ 
+    // start the session
+    session_start();
+ 
+ 	$sms_message = "";
+	$binary_numbers = array(128,64,32,16,8,4,2,1);
+ 
+    // get the session varible if it exists
+    $counter = $_SESSION['counter'];
+	$which_binary = $_SESSION['which_binary'];
+	$number_1 = $_SESSION['number_1'];
+	$number_2 = $_SESSION['number_2'];
+	$number_1_temp = $_SESSION['number_1_temp'];
+	$number_2_temp = $_SESSION['number_2_temp'];
+	$addition = $_SESSION['addition'];
+	$num1_binary_array = $_SESSION['num1_binary_array'];
+	$num2_binary_array = $_SESSION['num2_binary_array'];
+	$result_array = $_SESSION['result_array'];
+ 
+    // if it doesnt, set the default.
+    if(!strlen($counter)) $counter = 0;
+    if(!isset($_SESSION['num1_binary_array'])) $num1_binary_array = array(0,0,0,0,0,0,0,0);
+    if(!isset($_SESSION['num2_binary_array'])) $num1_binary_array = array(0,0,0,0,0,0,0,0);
+    if(!isset($_SESSION['result_array'])) $result_array = array(0,0,0,0,0,0,0,0);
 	
+	//  If CALC then reset, else start the calc
+    if (strpos($_REQUEST['Body'],'CALC') !== false) {
+		$counter = 0;
+		$sms_message = "New calculation requested by user 51984806. I will need your help. Is that ok? (Y/N)";
+		//get the numbers
+		$pieces = explode(" ", $_REQUEST['Body']);
+		$_SESSION['number_1'] = $pieces[1];
+		$_SESSION['number_2'] = $pieces[3];
+		$_SESSION['number_1_temp'] = $pieces[1];
+		$_SESSION['number_2_temp'] = $pieces[3];
+		$addition = true;
+		if ($pieces[2] != '+') $addition = false;
+		$_SESSION['addition'] = $addition;
+		$which_binary = 0;
+	    $num1_binary_array = array(0,0,0,0,0,0,0,0);
+	    $num2_binary_array = array(0,0,0,0,0,0,0,0);
+	    $result_array = array(0,0,0,0,0,0,0,0);
+	} else {
+		switch ($counter) {
+			case 1:
+				//Can the user help?
+				if (trim($_REQUEST['Body']) == 'N' || trim($_REQUEST['Body']) == 'n') {
+					$sms_message = "We will contact another processing user, and send the result once it has been calculated.";
+				} else {
+					$sms_message = "First we will convert $number_1 to binary. Is $binary_numbers[$which_binary] less than or equal to $number_1? (Y/N)";
+					$which_binary++;
+				}
+				break;
+			
+			case 2:
+			case 3:
+			case 4:
+			case 5:
+			case 6:
+			case 7:
+			case 8:
+			case 9:	
+				if (trim($_REQUEST['Body']) == 'Y' || trim($_REQUEST['Body']) == 'y') {
+					$num1_binary_array[$which_binary-1] = 1;
+					$number_1_temp -= $binary_numbers[$which_binary-1];
+					$_SESSION['number_1_temp'] = $number_1_temp;	
+				} 
+				if ((int)$number_1_temp < 1 || $counter == 9) {
+					$counter = 9;
+					$sms_message = "$number_1 is ";
+					for ($i=0; $i < 8; $i++) { 
+						$sms_message .= $num1_binary_array[$i];
+						if ($i != 7) $sms_message .= ",";
+					}
+					$which_binary = 0;
+					$sms_message .= ". Now, $number_2. Is $binary_numbers[$which_binary] less than or equal to $number_2? (Y/N)";
+					$which_binary++;
+				} else {
+					// Binary of first number
+					$sms_message = "Is $binary_numbers[$which_binary] less than or equal to $number_1_temp? (Y/N)";
+					$which_binary++;
+				}
+				break;
+				
+			case 10:
+			case 11:
+			case 12:
+			case 13:
+			case 14:
+			case 15:
+			case 16:
+			case 17:	
+				if (trim($_REQUEST['Body']) == 'Y' || trim($_REQUEST['Body']) == 'y') {
+					$num2_binary_array[$which_binary-1] = 1;
+					$number_2_temp -= $binary_numbers[$which_binary-1];
+					$_SESSION['number_2_temp'] = $number_2_temp;
+				} 
+				if ((int)$number_2_temp < 1 || $counter == 17) {
+					$counter = 17;
+					$which_binary = 7;
+					$sms_message = "$number_2 is: ";
+					for ($i=0; $i < 8; $i++) { 
+						$sms_message .= $num2_binary_array[$i];
+						if ($i != 7) $sms_message .= ",";
+					}
+					if ($addition) {
+						$sms_message .= ". Now we will add the two numbers. What is $num1_binary_array[$which_binary] + $num2_binary_array[$which_binary]? (0/1/2)";
+					} else {
+						$sms_message .= ". Now we shall subtract the two numbers. How?";
+					}
+					$which_binary--;
+				} else {
+					// Binary of first number
+					$sms_message = "Is $binary_numbers[$which_binary] less than or equal to $number_2_temp? (Y/N)";
+					$which_binary++;
+				}
+				break;
+				
+			case 18:
+			case 19:
+			case 20:
+			case 21:
+			case 22:
+			case 23:
+			case 24:
+				$returned_result = (int)trim($_REQUEST['Body']);
+				$tempval = $result_array[$which_binary+1] + $returned_result;
+				//There's a problem with this
+				if ($result_array[$which_binary+1] > 1) {
+					$result_array[$which_binary+1] = 0;
+					$result_array[$which_binary] += 1;
+				} else {
+					$result_array[$which_binary+1] = $tempval;
+				}
+				
+				// Process result
+				$sms_message .= "What is $num1_binary_array[$which_binary] + $num2_binary_array[$which_binary]? (0/1/2)";
+				$which_binary--;				
+				break;
+				
+			case 25:
+				$result_array[0] = (int)trim($_REQUEST['Body']);
+				$sms_message = "The result is: ";
+				for ($i=0; $i < 8; $i++) { 
+					$sms_message .= $result_array[$i];
+					if ($i != 7) $sms_message .= ",";
+				}
+				$sms_message .= ". Or ";
+				for ($i=0; $i < 8; $i++) { 
+					if ($result_array[$i] == 1) {
+						$sms_message .= $binary_numbers[$i]." + ";
+					}
+				}
+				$sms_message = rtrim($sms_message, '+');
+				break;
+			
+			default:
+				// Other cases
+				$sms_message = "ERROR: counter is $counter";
+				break;
+		}
+	}
+ 
+    // increment it
+    $counter++;
+    // save it
+    $_SESSION['counter'] = $counter;
+	$_SESSION['which_binary'] = $which_binary;
+	$_SESSION['num1_binary_array'] = $num1_binary_array;
+	$_SESSION['num2_binary_array'] = $num2_binary_array;
+	$_SESSION['result_array'] = $result_array;
+	
+    // output the counter response
+    header("content-type: text/xml");
+    echo "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+?>
+<Response>
+    <Sms><?php echo $sms_message ?></Sms>
 </Response>
